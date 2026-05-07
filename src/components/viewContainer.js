@@ -19,7 +19,19 @@ function setControllerClass(view, options) {
         }
 
         controllerUrl = Dashboard.getPluginUrl(controllerUrl);
-        const apiUrl = ApiClient.getUrl('/web/' + controllerUrl);
+        let apiUrl = ApiClient.getUrl('/web/' + controllerUrl);
+
+        // Some 3rd-party Plugins controller JS is loaded via dynamic import(), which the
+        // browser fetches without custom Authorization headers. If the
+        // server has integrated the page with a short-lived (e.g. 5 minutes) page token, append
+        // it so the request can authenticate via the page_token
+        // query parameter. Falls through harmlessly on older servers.
+        const pageToken = view.getAttribute('data-plugin-page-token');
+        if (pageToken) {
+            apiUrl += (apiUrl.includes('?') ? '&' : '?')
+                + 'page_token=' + encodeURIComponent(pageToken);
+        }
+
         return importModule(apiUrl).then((ControllerFactory) => {
             options.controllerFactory = ControllerFactory;
         });
